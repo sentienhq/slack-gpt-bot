@@ -26,6 +26,11 @@ def get_conversation_history(channel_id, thread_ts):
         inclusive=True
     )
 
+@app.command("/refresh")
+def hello_command(ack, body):
+    user_id = body["user_id"]
+    channel_id = channel_id = body['event']['channel']
+    ack(f"Hi <@{user_id}>!")
 
 @app.event("app_mention")
 def command_handler(body, context):
