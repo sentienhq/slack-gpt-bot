@@ -53,28 +53,35 @@ def command_handler(body, context):
         )
         reply_message_ts = slack_resp['message']['ts']
         conversation_history = get_conversation_history(channel_id, thread_ts)
-        messages = process_conversation_history(conversation_history, bot_user_id)
-        print('Messages: ', messages')
-        num_tokens = num_tokens_from_messages(messages)
-        print(f"Number of tokens: {num_tokens}")
+        for message in conversation_history['messages'][:-1]:
+            role = "assistant" if message['user'] == bot_user_id else "user"
+            message_text = message['text']
+            if message_text:
+                print({"role": role, "content": message_text})
 
-        openai_response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            stream=True
-        )
 
-        response_text = ""
-        ii = 0
-        for chunk in openai_response:
-            if chunk.choices[0].delta.get('content'):
-                ii = ii + 1
-                response_text += chunk.choices[0].delta.content
-                if ii > N_CHUNKS_TO_CONCAT_BEFORE_UPDATING:
-                    update_chat(app, channel_id, reply_message_ts, response_text)
-                    ii = 0
-            elif chunk.choices[0].finish_reason == 'stop':
-                update_chat(app, channel_id, reply_message_ts, response_text)
+        # messages = process_conversation_history(conversation_history, bot_user_id)
+        # # print('Messages: ', messages)
+        # num_tokens = num_tokens_from_messages(messages)
+        # print(f"Number of tokens: {num_tokens}")
+
+        # openai_response = openai.ChatCompletion.create(
+        #     model="gpt-3.5-turbo",
+        #     messages=messages,
+        #     stream=True
+        # )
+
+        # response_text = ""
+        # ii = 0
+        # for chunk in openai_response:
+        #     if chunk.choices[0].delta.get('content'):
+        #         ii = ii + 1
+        #         response_text += chunk.choices[0].delta.content
+        #         if ii > N_CHUNKS_TO_CONCAT_BEFORE_UPDATING:
+        #             update_chat(app, channel_id, reply_message_ts, response_text)
+        #             ii = 0
+        #     elif chunk.choices[0].finish_reason == 'stop':
+        #         update_chat(app, channel_id, reply_message_ts, response_text)
     except Exception as e:
         print(f"Error: {e}")
         app.client.chat_postMessage(
