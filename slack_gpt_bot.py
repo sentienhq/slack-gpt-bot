@@ -17,10 +17,12 @@ response = requests.get(url)
 
 # Use the response's content as input to a CSV reader
 csv_reader = csv.reader(response.content.decode('utf-8').splitlines())
-
-# Iterate over each row in the CSV file
+csv_rows = []
 for row in csv_reader:
-    print(row)
+    csv_rows.append(row)
+
+for row in csv_rows:
+    print(row[0])
 
 from utils import (N_CHUNKS_TO_CONCAT_BEFORE_UPDATING, OPENAI_API_KEY,
                    SLACK_APP_TOKEN, SLACK_BOT_TOKEN, WAIT_MESSAGE,
@@ -52,6 +54,7 @@ def command_handler(body, context):
         reply_message_ts = slack_resp['message']['ts']
         conversation_history = get_conversation_history(channel_id, thread_ts)
         messages = process_conversation_history(conversation_history, bot_user_id)
+        print('Messages: ', messages')
         num_tokens = num_tokens_from_messages(messages)
         print(f"Number of tokens: {num_tokens}")
 
