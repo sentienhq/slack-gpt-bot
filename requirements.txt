@@ -6,3 +6,5 @@ openai
 tiktoken
 trafilatura
 python-dotenv
+csv
+requests

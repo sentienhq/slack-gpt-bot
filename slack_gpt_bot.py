@@ -1,5 +1,7 @@
 import openai
 import os
+import requests
+import csv
 from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -9,6 +11,16 @@ load_dotenv()
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+
+url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyhvq0jSw9hW0yoGasTjKdgYtABTP8M77WtcOOEG_eNExzIYDCFmwSze5b3xnElTbCQnN_B0u2_DAn/pub?gid=0&single=true&output=csv"
+response = requests.get(url)
+
+# Use the response's content as input to a CSV reader
+csv_reader = csv.reader(response.content.decode('utf-8').splitlines())
+
+# Iterate over each row in the CSV file
+for row in csv_reader:
+    print(row)
 
 from utils import (N_CHUNKS_TO_CONCAT_BEFORE_UPDATING, OPENAI_API_KEY,
                    SLACK_APP_TOKEN, SLACK_BOT_TOKEN, WAIT_MESSAGE,
@@ -25,12 +37,6 @@ def get_conversation_history(channel_id, thread_ts):
         ts=thread_ts,
         inclusive=True
     )
-
-@app.command("/refresh")
-def hello_command(ack, body):
-    user_id = body["user_id"]
-    channel_id = body['event']['channel']
-    ack(f"Hi <@{user_id}>!")
 
 @app.event("app_mention")
 def command_handler(body, context):
