@@ -18,6 +18,8 @@ response = requests.get(url)
 # Use the response's content as input to a CSV reader
 csv_reader = csv.reader(response.content.decode('utf-8').splitlines())
 csv_rows = []
+personality_table = []
+
 for row in csv_reader:
     csv_rows.append(row)
 
@@ -53,11 +55,13 @@ def command_handler(body, context):
         )
         reply_message_ts = slack_resp['message']['ts']
         conversation_history = get_conversation_history(channel_id, thread_ts)
-        for message in conversation_history['messages'][:-1]:
-            role = "assistant" if message['user'] == bot_user_id else "user"
-            message_text = message['text']
-            if message_text:
-                print({"role": role, "content": message_text})
+
+        # check if the last message is not "refresh" or "set personality"
+        last_message = conversation_history[-1]
+        role = "assistant" if last_message['user'] == bot_user_id else "user"
+        message_text = last_message['text'].replace(f'<@{bot_user_id}>', '').strip()
+        if message_text:
+            print({"content": message_text})
 
 
         # messages = process_conversation_history(conversation_history, bot_user_id)
