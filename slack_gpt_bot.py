@@ -17,6 +17,7 @@ You are an super inteligent AI assistant.
 You will answer the question as truthfully and inteligent as possible.
 If you're unsure of the answer, say Sorry, I don't know.
 '''
+PERSONALITY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyhvq0jSw9hW0yoGasTjKdgYtABTP8M77WtcOOEG_eNExzIYDCFmwSze5b3xnElTbCQnN_B0u2_DAn/pub?gid=0&single=true&output=csv"
 
 from utils import (N_CHUNKS_TO_CONCAT_BEFORE_UPDATING, OPENAI_API_KEY,
                    SLACK_APP_TOKEN, SLACK_BOT_TOKEN, WAIT_MESSAGE,
@@ -30,7 +31,7 @@ personality_per_channel_table = []
 
 def fetch_personality_list():
     global possible_personalities_rows
-    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyhvq0jSw9hW0yoGasTjKdgYtABTP8M77WtcOOEG_eNExzIYDCFmwSze5b3xnElTbCQnN_B0u2_DAn/pub?gid=0&single=true&output=csv"
+    url = PERSONALITY_URL
     response = requests.get(url)
     # Use the response's content as input to a CSV reader
     csv_reader = csv.reader(response.content.decode('utf-8').splitlines())
@@ -61,6 +62,7 @@ def get_possible_personalities():
 def command_handler(body, context):
     global personality_per_channel_table
     global possible_personalities_rows
+    global PERSONALITY_URL
     try:
         channel_id = body['event']['channel']
         thread_ts = body['event'].get('thread_ts', body['event']['ts'])
@@ -78,7 +80,7 @@ def command_handler(body, context):
         last_message_commands = last_message_text.split()
         if last_message_commands[0] == 'help':
             print("help")
-            msg = "I can talk to you in different personalities. You can set the personality by typing `set_personality` and then the number of the personality you want to use. You can see the list of personalities by typing `list_personalities`. You can also refresh the list of personalities by typing `update_list`."
+            msg = "I can talk to you in different personalities. You can set the personality by typing `set_personality` and then the number of the personality you want to use. You can see the list of personalities by typing `list_personalities`. You can also refresh the list of personalities by typing `update_list`. You can visit url: '"+PERSONALITY_URL+"' to see the list of personalities."
             app.client.chat_postMessage(
                 channel=channel_id,
                 thread_ts=thread_ts,
