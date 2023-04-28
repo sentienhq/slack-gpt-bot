@@ -12,6 +12,12 @@ SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
+SYSTEM_PROMPT = '''
+You are an super inteligent AI assistant. 
+You will answer the question as truthfully and inteligent as possible.
+If you're unsure of the answer, say Sorry, I don't know.
+'''
+
 from utils import (N_CHUNKS_TO_CONCAT_BEFORE_UPDATING, OPENAI_API_KEY,
                    SLACK_APP_TOKEN, SLACK_BOT_TOKEN, WAIT_MESSAGE,
                    num_tokens_from_messages, process_conversation_history,
@@ -39,6 +45,13 @@ def get_conversation_history(channel_id, thread_ts):
         ts=thread_ts,
         inclusive=True
     )
+
+def get_channel_personality(channel_id):
+    global personality_per_channel_table
+    for row in personality_per_channel_table:
+        if row[0] == channel_id:
+            return row[1]
+    return SYSTEM_PROMPT
 
 def get_possible_personalities():
     global possible_personalities_rows
@@ -94,7 +107,7 @@ def command_handler(body, context):
             return
         if last_message_commands[0] == 'set_personality':
             personality = possible_personalities_rows[int(last_message_commands[1])]
-            msg = "This channel personality is set to" + personality[0] + ": " + personality[1]
+            msg = "This channel personality is set to" + personality[0] + " : " + personality[1]
             print(msg)
             personality_per_channel_table.append([channel_id, personality[1]])
             app.client.chat_postMessage(
@@ -104,29 +117,30 @@ def command_handler(body, context):
             )
             return
 
+        personality_prompt = get_channel_personality(channel_id)
 
-        # messages = process_conversation_history(conversation_history, bot_user_id)
-        # # print('Messages: ', messages)
-        # num_tokens = num_tokens_from_messages(messages)
-        # print(f"Number of tokens: {num_tokens}")
+        messages = process_conversation_history(conversation_history, bot_user_id, personality_prompt)
+        # print('Messages: ', messages)
+        num_tokens = num_tokens_from_messages(messages)
+        print(f"Number of tokens: {num_tokens}")
 
-        # openai_response = openai.ChatCompletion.create(
-        #     model="gpt-3.5-turbo",
-        #     messages=messages,
-        #     stream=True
-        # )
+        openai_response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            stream=True
+        )
 
-        # response_text = ""
-        # ii = 0
-        # for chunk in openai_response:
-        #     if chunk.choices[0].delta.get('content'):
-        #         ii = ii + 1
-        #         response_text += chunk.choices[0].delta.content
-        #         if ii > N_CHUNKS_TO_CONCAT_BEFORE_UPDATING:
-        #             update_chat(app, channel_id, reply_message_ts, response_text)
-        #             ii = 0
-        #     elif chunk.choices[0].finish_reason == 'stop':
-        #         update_chat(app, channel_id, reply_message_ts, response_text)
+        response_text = ""
+        ii = 0
+        for chunk in openai_response:
+            if chunk.choices[0].delta.get('content'):
+                ii = ii + 1
+                response_text += chunk.choices[0].delta.content
+                if ii > N_CHUNKS_TO_CONCAT_BEFORE_UPDATING:
+                    update_chat(app, channel_id, reply_message_ts, response_text)
+                    ii = 0
+            elif chunk.choices[0].finish_reason == 'stop':
+                update_chat(app, channel_id, reply_message_ts, response_text)
     except Exception as e:
         print(f"Error: {e}")
         app.client.chat_postMessage(

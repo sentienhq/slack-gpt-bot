@@ -12,11 +12,6 @@ SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 SLACK_APP_TOKEN = os.getenv("SLACK_APP_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-SYSTEM_PROMPT = '''
-You are an AI assistant. 
-You will answer the question as truthfully as possible.
-If you're unsure of the answer, say Sorry, I don't know.
-'''
 WAIT_MESSAGE = "Got your request. Please wait."
 N_CHUNKS_TO_CONCAT_BEFORE_UPDATING = 20
 MAX_TOKENS = 8192
@@ -72,8 +67,8 @@ def num_tokens_from_messages(messages, model="gpt-4"):
     num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
     return num_tokens
 
-def process_conversation_history(conversation_history, bot_user_id):
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+def process_conversation_history(conversation_history, bot_user_id, sys_prompt):
+    messages = [{"role": "system", "content": sys_prompt}]
     for message in conversation_history['messages'][:-1]:
         role = "assistant" if message['user'] == bot_user_id else "user"
         message_text = process_message(message, bot_user_id)
