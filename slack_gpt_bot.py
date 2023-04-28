@@ -67,7 +67,7 @@ def command_handler(body, context):
                 thread_ts=thread_ts,
                 text=msg
             )
-            break
+            return
         if last_message_commands[0] == 'update_list':
             print("updating list")
             fetch_personality_list()
@@ -78,7 +78,7 @@ def command_handler(body, context):
                 thread_ts=thread_ts,
                 text=msg
             )
-            break
+            return
         if last_message_commands[0] == 'list_personalities':
             print("list personalities")
             msg = get_possible_personalities()
@@ -87,7 +87,7 @@ def command_handler(body, context):
                 thread_ts=thread_ts,
                 text=msg
             )
-            break
+            return
         if last_message_commands[0] == 'set_personality':
             personality = possible_personalities_rows[int(last_message_commands[1])]
             msg = "This channel personality is set to" + personality[0] + ": " + personality[1]
@@ -98,7 +98,7 @@ def command_handler(body, context):
                 thread_ts=thread_ts,
                 text=msg
             )
-            break
+            return
 
 
         # messages = process_conversation_history(conversation_history, bot_user_id)
