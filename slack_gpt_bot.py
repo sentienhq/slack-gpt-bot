@@ -23,6 +23,7 @@ possible_personalities_rows = []
 personality_per_channel_table = []
 
 def fetch_personality_list():
+    global possible_personalities_rows
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyhvq0jSw9hW0yoGasTjKdgYtABTP8M77WtcOOEG_eNExzIYDCFmwSze5b3xnElTbCQnN_B0u2_DAn/pub?gid=0&single=true&output=csv"
     response = requests.get(url)
     # Use the response's content as input to a CSV reader
@@ -40,10 +41,13 @@ def get_conversation_history(channel_id, thread_ts):
     )
 
 def get_possible_personalities():
+    global possible_personalities_rows
     return "\n".join([f"{index}: {value}" for index, value in enumerate(possible_personalities_rows)])
 
 @app.event("app_mention")
 def command_handler(body, context):
+    global personality_per_channel_table
+    global possible_personalities_rows
     try:
         channel_id = body['event']['channel']
         thread_ts = body['event'].get('thread_ts', body['event']['ts'])
