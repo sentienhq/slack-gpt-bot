@@ -13,10 +13,15 @@ SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 SYSTEM_PROMPT = '''
-You are an super inteligent AI assistant. 
+This is your personality. You are an super inteligent AI assistant. 
 You will answer the question as truthfully and inteligent as possible.
 If you're unsure of the answer, say Sorry, I don't know.
 '''
+THINGS_TO_REMEMBER = '''
+If request consists of things to remember for future, return it in format <<<remember:thing to remember>>> in the end of answer.
+List of things to remember: '''
+LIST_TO_REMEMBER = []
+
 PERSONALITY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyhvq0jSw9hW0yoGasTjKdgYtABTP8M77WtcOOEG_eNExzIYDCFmwSze5b3xnElTbCQnN_B0u2_DAn/pub?gid=0&single=true&output=csv"
 
 from utils import (N_CHUNKS_TO_CONCAT_BEFORE_UPDATING, OPENAI_API_KEY,
@@ -49,10 +54,11 @@ def get_conversation_history(channel_id, thread_ts):
 
 def get_channel_personality(channel_id):
     global personality_per_channel_table
+    response = SYSTEM_PROMPT
     for row in personality_per_channel_table:
         if row[0] == channel_id:
-            return row[1]
-    return SYSTEM_PROMPT
+            response = row[1]
+    return response + THINGS_TO_REMEMBER + "\n".join(LIST_TO_REMEMBER)
 
 def get_possible_personalities():
     global possible_personalities_rows
@@ -127,7 +133,7 @@ def command_handler(body, context):
         print(f"Number of tokens: {num_tokens}")
 
         openai_response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=messages,
             stream=True
         )
@@ -143,6 +149,10 @@ def command_handler(body, context):
                     ii = 0
             elif chunk.choices[0].finish_reason == 'stop':
                 update_chat(app, channel_id, reply_message_ts, response_text)
+                # check if response_text consists of <<< and >>> message and parse it and append to LIST_TO_REMEMBER
+                if '<<<remember:' in response_text and '>>>' in response_text:
+                    remember = response_text.split('<<<remember:')[1].split('>>>')[0]
+                    LIST_TO_REMEMBER.append(remember)
     except Exception as e:
         print(f"Error: {e}")
         app.client.chat_postMessage(
