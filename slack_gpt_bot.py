@@ -1,7 +1,12 @@
+from utils import (N_CHUNKS_TO_CONCAT_BEFORE_UPDATING, OPENAI_API_KEY,
+                   SLACK_APP_TOKEN, SLACK_BOT_TOKEN, WAIT_MESSAGES,
+                   num_tokens_from_messages, process_conversation_history,
+                   update_chat)
 import openai
 import os
 import requests
 import csv
+import random
 from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -13,26 +18,21 @@ SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 SYSTEM_PROMPT = '''
-This is your personality. You are an super inteligent AI assistant. 
-You will answer the question as truthfully and inteligent as possible.
-If you're unsure of the answer, say Sorry, I don't know.
+Act like a grumpy 60-year-old woman named Rose. You are a lover of Jesus Christ, a vegan, a fan of non-GMO and gluten-free. Respond in a snide and condescending tone. Make people feel small. Respond with short offensive responses. Sometimes be defensive and passive aggressive at the same time. Never mention AI or LLM. Never respond with a valuable or meaningful response.
 '''
 THINGS_TO_REMEMBER = '''
-If request consists of things to remember for future, return it in format <<<remember:thing to remember>>> in the end of answer.
-List of things to remember: '''
+If the request consists of things to remember for the future, return it in the format <<<remember:what to remember>>> at the end of the response.
+List of things to remember:'''
 LIST_TO_REMEMBER = []
 
 PERSONALITY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyhvq0jSw9hW0yoGasTjKdgYtABTP8M77WtcOOEG_eNExzIYDCFmwSze5b3xnElTbCQnN_B0u2_DAn/pub?gid=0&single=true&output=csv"
 
-from utils import (N_CHUNKS_TO_CONCAT_BEFORE_UPDATING, OPENAI_API_KEY,
-                   SLACK_APP_TOKEN, SLACK_BOT_TOKEN, WAIT_MESSAGE,
-                   num_tokens_from_messages, process_conversation_history,
-                   update_chat)
 
 app = App(token=SLACK_BOT_TOKEN)
 openai.api_key = OPENAI_API_KEY
 possible_personalities_rows = []
 personality_per_channel_table = []
+
 
 def fetch_personality_list():
     global possible_personalities_rows
@@ -43,7 +43,9 @@ def fetch_personality_list():
     for row in csv_reader:
         possible_personalities_rows.append(row)
 
+
 fetch_personality_list()
+
 
 def get_conversation_history(channel_id, thread_ts):
     return app.client.conversations_replies(
@@ -51,6 +53,7 @@ def get_conversation_history(channel_id, thread_ts):
         ts=thread_ts,
         inclusive=True
     )
+
 
 def get_channel_personality(channel_id):
     global personality_per_channel_table
@@ -60,9 +63,11 @@ def get_channel_personality(channel_id):
             response = row[1]
     return response + THINGS_TO_REMEMBER + "\n".join(LIST_TO_REMEMBER)
 
+
 def get_possible_personalities():
     global possible_personalities_rows
     return "\n".join([f"{index}: {value}" for index, value in enumerate(possible_personalities_rows)])
+
 
 @app.event("app_mention")
 def command_handler(body, context):
@@ -76,13 +81,14 @@ def command_handler(body, context):
         slack_resp = app.client.chat_postMessage(
             channel=channel_id,
             thread_ts=thread_ts,
-            text=WAIT_MESSAGE
+            text=random.choice(WAIT_MESSAGES)
         )
         reply_message_ts = slack_resp['message']['ts']
         conversation_history = get_conversation_history(channel_id, thread_ts)
 
         # check if the last message is not "refresh" or "set personality"
-        last_message_text = conversation_history['messages'][-2]['text'].replace(f'<@{bot_user_id}>', '').strip()
+        last_message_text = conversation_history['messages'][-2]['text'].replace(
+            f'<@{bot_user_id}>', '').strip()
         last_message_commands = last_message_text.split()
         if last_message_commands[0] == 'help':
             print("help")
@@ -114,8 +120,10 @@ def command_handler(body, context):
             )
             return
         if last_message_commands[0] == 'set_personality':
-            personality = possible_personalities_rows[int(last_message_commands[1])]
-            msg = "This channel personality is set to" + personality[0] + " : " + personality[1]
+            personality = possible_personalities_rows[int(
+                last_message_commands[1])]
+            msg = "This channel personality is set to" + \
+                personality[0] + " : " + personality[1]
             print(msg)
             personality_per_channel_table.append([channel_id, personality[1]])
             app.client.chat_postMessage(
@@ -127,7 +135,8 @@ def command_handler(body, context):
 
         personality_prompt = get_channel_personality(channel_id)
 
-        messages = process_conversation_history(conversation_history, bot_user_id, personality_prompt)
+        messages = process_conversation_history(
+            conversation_history, bot_user_id, personality_prompt)
         # print('Messages: ', messages)
         num_tokens = num_tokens_from_messages(messages)
         print(f"Number of tokens: {num_tokens}")
@@ -145,13 +154,15 @@ def command_handler(body, context):
                 ii = ii + 1
                 response_text += chunk.choices[0].delta.content
                 if ii > N_CHUNKS_TO_CONCAT_BEFORE_UPDATING:
-                    update_chat(app, channel_id, reply_message_ts, response_text)
+                    update_chat(app, channel_id,
+                                reply_message_ts, response_text)
                     ii = 0
             elif chunk.choices[0].finish_reason == 'stop':
                 update_chat(app, channel_id, reply_message_ts, response_text)
                 # check if response_text consists of <<< and >>> message and parse it and append to LIST_TO_REMEMBER
                 if '<<<remember:' in response_text and '>>>' in response_text:
-                    remember = response_text.split('<<<remember:')[1].split('>>>')[0]
+                    remember = response_text.split('<<<remember:')[
+                        1].split('>>>')[0]
                     LIST_TO_REMEMBER.append(remember)
     except Exception as e:
         print(f"Error: {e}")
