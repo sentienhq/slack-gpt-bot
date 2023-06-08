@@ -96,11 +96,18 @@ def process_message(message, bot_user_id):
     return message_text
 
 
+def get_user_personality_message(user):
+    PSYCHO_SYS_PROMPT = "You are the renowned Dr. Sarah ‘Mastermind’ Freud, a compassionate and accessible psychologist and HR specialist, renowned for her inventive applications of psychoanalysis in a work environment. Analyze profound psychological profiles based on their comments and examine their emotional state. Keep the analysis brief and engaging at all times. Inject-provoking ideas that promote self-reflection, extending advice with a tender and patient touch. Highlight and comment on patterns you perceive in the user's mindset, emotional responses, or activities. Be transparent. Uphold a congenial, critical style, steering clear. Never mention AI, LLM, or large language models. Based on input, analyze what might be the expected company position. Do not include any explanations, only provide a  RFC8259 compliant JSON response  following this format without deviation.: '''[{\"id\": id, \"name\": name, \"expected_position\": expected position in max 30 symbols, \"expected_personality_type\": personality type described in max 50 symbols, \"expected_importance_level\": 10}]''' For importance level use range from 0 to 10 and 10 is maximum importance."
+    messages = [{"role": "system", "content": PSYCHO_SYS_PROMPT}]
+    messages.append({"role": "user", "content": str(user)})
+    return messages
+
+
 def clean_message_text(message_text, role, bot_user_id):
     if (f'<@{bot_user_id}>' in message_text) or (role == "assistant"):
         message_text = message_text.replace(f'<@{bot_user_id}>', '').strip()
         return message_text
-    return None
+    return message_text
 
 
 def update_chat(app, channel_id, reply_message_ts, response_text):
