@@ -18,28 +18,6 @@ N_CHUNKS_TO_CONCAT_BEFORE_UPDATING = 20
 MAX_TOKENS = 8192
 
 
-def extract_url_list(text):
-    url_pattern = re.compile(
-        r'<(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)>'
-    )
-    url_list = url_pattern.findall(text)
-    return url_list if len(url_list) > 0 else None
-
-
-def augment_user_message(user_message, url_list):
-    all_url_content = ''
-    for url in url_list:
-        downloaded = fetch_url(url)
-        url_content = extract(downloaded, config=newconfig)
-        user_message = user_message.replace(f'<{url}>', '')
-        all_url_content = all_url_content + \
-            f' Contents of {url} : \n """ {url_content} """'
-    user_message = user_message + "\n" + all_url_content
-    return user_message
-
-# From https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
-
-
 def num_tokens_from_messages(messages, model="gpt-4"):
     """Returns the number of tokens used by a list of messages."""
     try:
@@ -88,10 +66,6 @@ def process_conversation_history(conversation_history, bot_user_id, sys_prompt):
 def process_message(message, bot_user_id):
     message_text = message['text']
     role = "assistant" if message['user'] == bot_user_id else "user"
-    if role == "user":
-        url_list = extract_url_list(message_text)
-        if url_list:
-            message_text = augment_user_message(message_text, url_list)
     message_text = clean_message_text(message_text, role, bot_user_id)
     return message_text
 
